@@ -34,6 +34,13 @@ corevent-analytics
 
 Artifacts land in `outputs/` (rules CSV, cluster summary, metrics JSON, plots).
 
+API-facing consolidated JSON (consumed by `api-corevent`):
+
+- `outputs/eda.json`
+- `outputs/apriori.json`
+- `outputs/kmeans.json`
+- `outputs/classification.json`
+
 ## Notebooks
 
 For team visualization only — logic lives in `src/corevent_analytics/`:

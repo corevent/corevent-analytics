@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,14 @@ from corevent_analytics.data.preprocess import (
     build_classification_frame,
     build_user_features,
 )
+from corevent_analytics.export import (
+    build_apriori_payload,
+    build_classification_payload,
+    build_eda_payload,
+    build_kmeans_payload,
+    json_safe,
+    write_json,
+)
 from corevent_analytics.models.apriori import run_apriori
 from corevent_analytics.models.classify import run_classification
 from corevent_analytics.models.kmeans import run_kmeans
@@ -29,18 +38,7 @@ def _ensure_output_dir(path: Path) -> Path:
 
 
 def _json_safe(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {str(k): _json_safe(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_json_safe(v) for v in value]
-    if hasattr(value, "item"):
-        try:
-            return value.item()
-        except Exception:  # noqa: BLE001
-            return str(value)
-    if isinstance(value, (str, int, float, bool)) or value is None:
-        return value
-    return str(value)
+    return json_safe(value)
 
 
 def _save_apriori_outputs(result: dict[str, Any], output_dir: Path) -> None:
@@ -157,6 +155,7 @@ def _save_classification_outputs(result: dict[str, Any], output_dir: Path) -> No
 def run_pipeline(settings: Settings | None = None) -> dict[str, Any]:
     settings = settings or get_settings()
     output_dir = _ensure_output_dir(Path(settings.output_dir))
+    generated_at = datetime.now(UTC)
 
     tables, source = load_data(settings)
     logger.info("Data source: %s", source)
@@ -176,6 +175,16 @@ def run_pipeline(settings: Settings | None = None) -> dict[str, Any]:
     x_cls, y_cls, _ = build_classification_frame(tables)
 
     user_features.to_csv(output_dir / "user_features.csv", index=False)
+    write_json(
+        output_dir / "eda.json",
+        build_eda_payload(
+            tables,
+            transactions,
+            user_features,
+            source=source,
+            generated_at=generated_at,
+        ),
+    )
 
     apriori_result = run_apriori(
         transactions,
@@ -183,6 +192,10 @@ def run_pipeline(settings: Settings | None = None) -> dict[str, Any]:
         min_confidence=settings.min_confidence,
     )
     _save_apriori_outputs(apriori_result, output_dir)
+    write_json(
+        output_dir / "apriori.json",
+        build_apriori_payload(apriori_result, source=source, generated_at=generated_at),
+    )
 
     kmeans_result = run_kmeans(
         user_features,
@@ -190,6 +203,15 @@ def run_pipeline(settings: Settings | None = None) -> dict[str, Any]:
         random_state=settings.random_state,
     )
     _save_kmeans_outputs(kmeans_result, output_dir)
+    write_json(
+        output_dir / "kmeans.json",
+        build_kmeans_payload(
+            kmeans_result,
+            source=source,
+            generated_at=generated_at,
+            random_state=settings.random_state,
+        ),
+    )
 
     classify_result = run_classification(
         x_cls,
@@ -198,6 +220,14 @@ def run_pipeline(settings: Settings | None = None) -> dict[str, Any]:
         random_state=settings.random_state,
     )
     _save_classification_outputs(classify_result, output_dir)
+    write_json(
+        output_dir / "classification.json",
+        build_classification_payload(
+            classify_result,
+            source=source,
+            generated_at=generated_at,
+        ),
+    )
 
     summary = {
         "source": source,
