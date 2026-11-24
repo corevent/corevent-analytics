@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "corevent-analytics"
+version = "0.1.0"
+description = "Data mining for Corevent: Apriori, K-Means, and supervised classification"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas>=2.2",
+  "numpy>=1.26",
+  "scikit-learn>=1.4",
+  "mlxtend>=0.23",
+  "sqlalchemy>=2.0",
+  "psycopg[binary]>=3.1",
+  "pydantic-settings>=2.2",
+  "python-dotenv>=1.0",
+  "matplotlib>=3.8",
+  "seaborn>=0.13",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "jupyterlab>=4.0",
+  "ipykernel>=6.29",
+]
+
+[project.scripts]
+corevent-analytics = "corevent_analytics.pipeline:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
