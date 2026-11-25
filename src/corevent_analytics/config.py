@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     test_size: float = Field(default=0.25, alias="TEST_SIZE")
     random_state: int = Field(default=42, alias="RANDOM_STATE")
 
+    # When set, API-facing JSONs are uploaded after the pipeline finishes.
+    gcs_bucket: str | None = Field(default=None, alias="GCS_BUCKET")
+    analytics_gcs_prefix: str = Field(default="analytics/", alias="ANALYTICS_GCS_PREFIX")
+
+    def has_gcs_upload(self) -> bool:
+        return bool(self.gcs_bucket and self.gcs_bucket.strip())
+
     def build_database_url(self) -> str | None:
         if self.db_url:
             return self.db_url

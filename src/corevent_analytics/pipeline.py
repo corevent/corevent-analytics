@@ -28,6 +28,7 @@ from corevent_analytics.export import (
 from corevent_analytics.models.apriori import run_apriori
 from corevent_analytics.models.classify import run_classification
 from corevent_analytics.models.kmeans import run_kmeans
+from corevent_analytics.publish import upload_api_artifacts
 
 logger = logging.getLogger(__name__)
 
@@ -229,6 +230,15 @@ def run_pipeline(settings: Settings | None = None) -> dict[str, Any]:
         ),
     )
 
+    uploaded_objects: list[str] = []
+    bucket_name = (settings.gcs_bucket or "").strip()
+    if bucket_name:
+        uploaded_objects = upload_api_artifacts(
+            output_dir,
+            bucket_name=bucket_name,
+            prefix=settings.analytics_gcs_prefix,
+        )
+
     summary = {
         "source": source,
         "n_transactions": apriori_result["n_transactions"],
@@ -238,6 +248,7 @@ def run_pipeline(settings: Settings | None = None) -> dict[str, Any]:
         "rf_f1": (classify_result.get("random_forest") or {}).get("metrics", {}).get("f1"),
         "mlp_f1": (classify_result.get("mlp") or {}).get("metrics", {}).get("f1"),
         "output_dir": str(output_dir),
+        "gcs_uploaded": uploaded_objects,
     }
     (output_dir / "pipeline_summary.json").write_text(
         json.dumps(_json_safe(summary), indent=2),

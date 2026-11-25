@@ -41,6 +41,28 @@ API-facing consolidated JSON (consumed by `api-corevent`):
 - `outputs/kmeans.json`
 - `outputs/classification.json`
 
+When `GCS_BUCKET` is set, those four files are also uploaded to
+`gs://$GCS_BUCKET/$ANALYTICS_GCS_PREFIX` (default prefix `analytics/`).
+
+## CI
+
+GitHub Actions runs `pytest` and a Docker image build on push/PR
+(`.github/workflows/ci.yml`).
+
+## Docker
+
+```bash
+docker build -t corevent-analytics .
+docker run --rm \
+  -e DB_URL="postgresql+psycopg://..." \
+  -e GCS_BUCKET=your-bucket \
+  -e ANALYTICS_GCS_PREFIX=analytics/ \
+  corevent-analytics
+```
+
+On GCP, prefer Cloud Run Jobs with a service account that can read Postgres
+and write to the bucket (Application Default Credentials — no key file).
+
 ## Notebooks
 
 For team visualization only — logic lives in `src/corevent_analytics/`:
